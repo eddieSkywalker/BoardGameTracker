@@ -1,9 +1,59 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@inject NavigationManager Navigation
+@attribute [Authorize]
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Home - BoardGameTracker</PageTitle>
 
-<h1>Hello, world!</h1>
+<AuthorizeView>
+    <Authorized>
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <h1>Welcome to BoardGameTracker</h1>
+                    <p>Hello, @context.User.Identity?.Name!</p>
+                    <p>This is your dashboard. You can manage your board games, track your collection, and more.</p>
+                </div>
+            </div>
+            
+            <!-- Authentication Status Section -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <h4>Welcome, @context.User.Identity.Name!</h4>
+                        <p>You are authenticated!</p>
+                        <p><strong>All Claims:</strong></p>
+                        <ul>
+                            @foreach (var claim in context.User.Claims)
+                            {
+                                <li>@claim.Type: @claim.Value</li>
+                            }
+                        </ul>
+                    </div>
+                    
+                    <AuthorizeView Policy="WarehouseUser" Context="policyContext">
+                        <Authorized>
+                            <div class="alert alert-success">
+                                <h4>✅ Warehouse Authorization Successful!</h4>
+                                <p>You are authorized for Warehouse access!</p>
+                            </div>
+                        </Authorized>
+                        <NotAuthorized>
+                            <div class="alert alert-warning">
+                                <h4>❌ Warehouse Authorization Failed</h4>
+                                <p>You are logged in but don't have Warehouse privileges.</p>
+                            </div>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
 
-Welcome to your new app.
-
-<SurveyPrompt Title="How is Blazor working for you?" />
+@code {
+    private void NavigateToDashboard()
+    {
+        Navigation.NavigateTo("/internal/warehouse-dashboard");
+    }
+}
