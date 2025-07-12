@@ -1,0 +1,18 @@
+@page "/authentication/login"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.OpenIdConnect
+@inject NavigationManager Navigation
+
+<p>Redirecting to Cognito...</p>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var returnUrl = ReturnUrl ?? "/";
+        Navigation.NavigateTo($"/authentication/challenge?returnUrl={Uri.EscapeDataString(returnUrl)}", true);
+    }
+}

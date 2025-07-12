@@ -1,0 +1,78 @@
+@page "/internal/warehouse-portal"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.OpenIdConnect
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@attribute [Authorize(Policy = "WarehouseUser")]
+
+<h3>Warehouse Portal</h3>
+
+<AuthorizeView Context="authContext">
+    <Authorized>
+        <div class="alert alert-info">
+            <h4>Welcome, @authContext.User.Identity.Name!</h4>
+            <p>You are authenticated!</p>
+            <p><strong>All Claims:</strong></p>
+            <ul>
+                @foreach (var claim in authContext.User.Claims)
+                {
+                    <li>@claim.Type: @claim.Value</li>
+                }
+            </ul>
+        </div>
+        
+        <AuthorizeView Policy="WarehouseUser" Context="policyContext">
+            <Authorized>
+                <div class="alert alert-success">
+                    <h4>✅ Warehouse Authorization Successful!</h4>
+                    <p>You are authorized for Warehouse access!</p>
+                    <div class="mt-3">
+                        <button class="btn btn-primary" @onclick="NavigateToDashboard">Go to Dashboard</button>
+                        <button class="btn btn-secondary" @onclick="Logout">Logout</button>
+                    </div>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="alert alert-warning">
+                    <h4>❌ Warehouse Authorization Failed</h4>
+                    <p>You are logged in but don't have Warehouse privileges.</p>
+                    <button class="btn btn-secondary" @onclick="Logout">Logout</button>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+    </Authorized>
+    <NotAuthorized>
+        <div class="alert alert-warning">
+            <p>You need to be logged in with warehouse privileges to access this portal.</p>
+            <button class="btn btn-primary" @onclick="Login">Login with Cognito</button>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code 
+{
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // This will show in browser F12 console - only runs after first render
+            await JSRuntime.InvokeVoidAsync("console.log", "WarehousePortal page loaded");
+        }
+    }
+
+    private async Task Login()
+    {
+        Navigation.NavigateTo($"/authentication/login?returnUrl={Uri.EscapeDataString(Navigation.Uri)}", true);
+    }
+
+    private async Task Logout()
+    {
+        Navigation.NavigateTo("/authentication/logout", true);
+    }
+
+    private void NavigateToDashboard()
+    {
+        Navigation.NavigateTo("/internal/warehouse-dashboard");
+    }
+}
