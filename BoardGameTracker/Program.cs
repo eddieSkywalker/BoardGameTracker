@@ -6,13 +6,13 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-builder.Services.AddSingleton<WeatherForecastService>();
 builder.Services.AddControllers();
 
 // ----- Add Authentication for Cognito
@@ -97,6 +97,13 @@ builder.Services.AddAuthorization(options =>
     });
 });
 // ----- End Authentication
+
+// Add EF Core
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Add Service
+builder.Services.AddScoped<IGameService, GameService>();
 
 var app = builder.Build();
 
