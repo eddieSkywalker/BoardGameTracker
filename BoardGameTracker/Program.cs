@@ -28,16 +28,23 @@ builder.Services.AddAuthentication(options =>
 })
 .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
 {
+    // 1. Your app trusts Cognito as the Identity Provider
     options.Authority = builder.Configuration["Cognito:Authority"];
-    options.ClientId = builder.Configuration["Cognito:ClientId"];
-    options.ClientSecret = builder.Configuration["Cognito:ClientSecret"];
+
+    // Cognito is both the Identity Provider AND Identity Source
+    // Users are stored in Cognito User Pool (source)
+    // Cognito authenticates them and issues tokens (provider)
+
+    // 2. Protocol specifications: OpenID Connect
+    // OAuth 2.0 "Authorization Code" flow
     options.ResponseType = OpenIdConnectResponseType.Code;
-    
-    // Clear default scopes and add only what Cognito supports
     options.Scope.Clear();
     options.Scope.Add("openid");
     options.Scope.Add("email");
     options.Scope.Add("profile");
+    // 3. These are your app's credentials with Cognito:
+    options.ClientId = builder.Configuration["Cognito:ClientId"];
+    options.ClientSecret = builder.Configuration["Cognito:ClientSecret"];
     
     options.SaveTokens = true;
     options.GetClaimsFromUserInfoEndpoint = true;
