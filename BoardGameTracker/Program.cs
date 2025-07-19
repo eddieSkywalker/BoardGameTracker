@@ -23,6 +23,8 @@ builder.Services.AddAuthentication(options =>
 })
 .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 {
+    options.Cookie.Domain = ".SwampDragonInn.com";
+    options.Cookie.Name = "CompanyAuth";
     options.LoginPath = "/authentication/challenge";
     options.LogoutPath = "/authentication/signout";
 })
