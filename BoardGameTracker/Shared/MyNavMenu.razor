@@ -1,0 +1,37 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Navigation
+@inject IConfiguration Configuration
+
+<MudNavMenu>
+    <MudNavLink Href="@($"{HomeUrl}")" Match="NavLinkMatch.All">Home</MudNavLink>
+    <AuthorizeView>
+        <Authorized>
+            <MudNavLink href="mygames" Match="NavLinkMatch.Prefix">My Games</MudNavLink>
+            <MudNavLink href="addgame" Match="NavLinkMatch.Prefix">Add Game</MudNavLink>
+            <MudNavLink onclick="Logout" Match="NavLinkMatch.Prefix">Logout</MudNavLink>
+        </Authorized>
+        <NotAuthorized>
+            <MudNavLink onclick="Login" Match="NavLinkMatch.Prefix">Login</MudNavLink>
+        </NotAuthorized>
+    </AuthorizeView>
+    <MudNavLink Href="@($"{AboutUrl}")" Match="NavLinkMatch.Prefix">About</MudNavLink>
+</MudNavMenu>
+
+@code {
+    private string HomeUrl => Configuration["Urls:Home"];
+    private string AboutUrl => Configuration["Urls:About"];
+
+    /// <summary>
+    /// Direct the user to the Cognito login page.
+    /// This will redirect back to the app after successful login.
+    /// </summary>
+    private void Login()
+    {
+        Navigation.NavigateTo("/authentication/challenge", true);
+    }
+
+    private void Logout()
+    {
+        Navigation.NavigateTo("/authentication/signout", true);
+    }
+}

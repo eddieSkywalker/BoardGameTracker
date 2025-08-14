@@ -1,6 +1,6 @@
 using BoardGameTracker.Models;
 
-namespace BoardGameTracker.Data
+namespace BoardGameTracker.Services
 {
     public interface IGameService
     {
