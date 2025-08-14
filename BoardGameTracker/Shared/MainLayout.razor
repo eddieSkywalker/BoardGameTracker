@@ -1,30 +1,68 @@
-﻿@inherits LayoutComponentBase
+﻿@using System.Xml
+@inherits LayoutComponentBase
 
-<PageTitle>BoardGameTracker</PageTitle>
+<PageTitle>Swamp Dragon Inn</PageTitle>
 
 <div class="page">
-    <AuthorizeView>
-        <Authorized>
-            <!-- Show full layout with navigation for authenticated users -->
-            <div class="sidebar">
-                <NavMenu />
-            </div>
-            <main>
-                <div class="top-row px-4">
-                    <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
-                </div>
-                <article class="content px-4">
+    <main>
+        <MudThemeProvider Theme="darkTheme"/> @* Required *@
+        <MudPopoverProvider /> @* Needed for popovers *@
+        <MudDialogProvider /> @* Needed for dialogs *@
+        <MudSnackbarProvider /> @* Needed for snackbars *@
+
+        <MudLayout>
+            <MudAppBar>
+                <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+                Board Game Tracker
+            </MudAppBar>
+            <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Always">
+                <MyNavMenu/>
+            </MudDrawer>
+
+            <MudMainContent>
+                <MudContainer MaxWidth="MaxWidth.Medium">
                     @Body
-                </article>
-            </main>
-        </Authorized>
-        <NotAuthorized>
-            <!-- Show minimal layout for unauthenticated users -->
-            <main>
-                <article class="content px-4">
-                    @Body
-                </article>
-            </main>
-        </NotAuthorized>
-    </AuthorizeView>
+                </MudContainer>
+            </MudMainContent>
+        </MudLayout>
+
+        @code {
+            bool _drawerOpen = true;
+
+            void DrawerToggle()
+            {
+                _drawerOpen = !_drawerOpen;
+            }
+
+
+            // Eggplant: #311465 and #210837
+            @* private MudTheme standardTheme = new MudTheme
+            {
+                PaletteLight = new PaletteLight
+                {
+                    Primary = "#4CAF50", // Primary color
+                    Secondary = "#C2B280", // Secondary color
+                    Background = "#F5F5DC", // Background color
+                    Surface = "#FFFFFF", // Surface color
+                    AppbarBackground = "#556B2F", // AppBar background color
+                    AppbarText = "#FFFFFF", // AppBar text color
+                    DrawerBackground = "#556B2F", // Drawer background color
+                    DrawerText = "#FFFFFF", // Drawer text color
+                    Success = "#228B22", // Success color
+                    Warning = "#D2B48C", // Warning color
+                    Error = "#8B0000", // Error color
+                    Info = "#4682B4" // Info color
+                }
+            }; *@
+
+            private MudTheme darkTheme = new MudTheme
+            {
+                PaletteLight = new PaletteLight
+                {
+                    Background = "#210837", // Background color
+                    DrawerBackground = "#A9A9A9", // Drawer background color
+                }
+            };
+        }
+    </main>
 </div>

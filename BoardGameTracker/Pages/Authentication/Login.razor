@@ -1,5 +1,6 @@
 @page "/authentication/login"
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="container">
     <div class="row justify-content-center mt-5">
@@ -20,8 +21,36 @@
 </div>
 
 @code {
+    [Parameter] public string? returnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user?.Identity?.IsAuthenticated == true)
+        {
+            if (!string.IsNullOrEmpty(returnUrl))
+            {
+                Navigation.NavigateTo(returnUrl, true);
+            }
+            // else: stay on login page or redirect to home if you want
+        }
+        else
+        {
+            @* var url = "/authentication/challenge";
+            Console.WriteLine($"[Login.razor] Login button clicked, redirecting to: {url}");
+            
+            if (!string.IsNullOrEmpty(returnUrl))
+                url += $"?returnUrl={Uri.EscapeDataString(returnUrl)}";
+            Navigation.NavigateTo(url, true); *@
+        }
+    }
+
     private void LoginUser()
     {
-        Navigation.NavigateTo($"/authentication/challenge?returnUrl={Uri.EscapeDataString("/")}", true);
+        var url = $"/authentication/challenge?returnUrl={Uri.EscapeDataString(returnUrl ?? "/")}";
+        Console.WriteLine($"[Login.razor] Login button clicked, redirecting to: {url}");
+        Navigation.NavigateTo(url, true);
     }
 }

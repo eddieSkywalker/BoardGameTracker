@@ -1,0 +1,226 @@
+@page "/mygames"
+@inject NavigationManager Navigation
+@inject IGameService GameService
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+@using BoardGameTracker.Models
+@using BoardGameTracker.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>My Games (@(games?.Count() ?? 0))</h3>
+                </div>
+                <br>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p>Loading your games...</p>
+                        </div>
+                    }
+                    else if (games == null || !games.Any())
+                    {
+                        <div class="text-center">
+                            <p>You don't have any games yet.</p>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateToAddGame">
+                                <MudIcon Icon="@Icons.Material.Filled.Add" /> Add Game
+                            </MudButton>
+                        </div>
+                    }
+                    else
+                    {
+                        // Games table
+                        <MudTable T="Game" Items="@games" Hover="true" CanCancelEdit="true" RowEditCancel="ResetItemToOriginalValues" HeaderClass="custom-header-style"
+                                  RowEditPreview="BackupItem" CommitEditTooltip="Save Changes" Filter="new Func<Game,bool>(FilterFunction)" 
+                                  OnCommitEditClick="@(() => SaveGameChanges())">
+                            <ToolBarContent>
+                                <MudTextField @bind-Value="searchString" Placeholder="Search games..." Adornment="Adornment.Start" 
+                                              AdornmentIcon="@Icons.Material.Filled.Search" Class="mr-2" />
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateToAddGame">
+                                    <MudIcon Icon="@Icons.Material.Filled.Add" /> Add Game
+                                </MudButton>
+                            </ToolBarContent>
+                            <HeaderContent>
+                                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Game, object>(x=>x.Name)">Name</MudTableSortLabel></MudTh>
+                                <MudTh><MudTableSortLabel SortBy="new Func<Game, object>(x=>x.Owner)">Owner</MudTableSortLabel></MudTh>
+                                <MudTh><MudTableSortLabel SortBy="new Func<Game, object>(x=>x.CreatedDate)">CreatedDate</MudTableSortLabel></MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd>@context.Name</MudTd>
+                                <MudTd>@context.Owner</MudTd>
+                                <MudTd>@context.CreatedDate.ToString("MMM dd, yyyy")</MudTd>
+                            </RowTemplate>
+                            <RowEditingTemplate>
+                                <MudTd DataLabel="Name">@context.Name</MudTd>
+                                <MudTd DataLabel="Owner">
+                                    <MudTextField @bind-Value="context.Owner" Required />
+                                </MudTd>
+                            </RowEditingTemplate>
+                        </MudTable>
+
+                        <br><br><br>
+                        <div class="row">
+                            @foreach (var game in games)
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h5 class="card-title">@game.Name</h5>
+                                            <p class="card-text">
+                                                <small class="text-muted">
+                                                    Owner: @game.Owner<br/>
+                                                    Added: @game.CreatedDate.ToString("MMM dd, yyyy")
+                                                </small>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="mt-3">
+                            <p class="text-muted">Total games: @games.Count()</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code 
+{
+    private List<Game>? games;
+    private bool isLoading = true;
+    private string currentUser = "Eddie"; // TODO: Replace with authenticated user
+    private Game? gameBeforeEdit;
+    private string searchString = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGames();
+    }
+
+    private async Task LoadGames()
+    {
+        try
+        {
+            isLoading = true;
+            
+            // This goes to VS Code terminal
+            Console.WriteLine($"Loading games for user: {currentUser}");
+            
+            // This goes to browser F12 console
+            await JSRuntime.InvokeVoidAsync("console.log", $"Loading games for user: {currentUser}");
+            
+            games = (await GameService.GetByOwnerAsync(currentUser)).ToList();
+            
+            // Browser console logging
+            await JSRuntime.InvokeVoidAsync("console.log", $"Found {games.Count()} games");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading games: {ex.Message}"); // Server console
+            await JSRuntime.InvokeVoidAsync("console.error", $"Error loading games: {ex.Message}"); // Browser console
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void NavigateToAddGame()
+    {
+        Navigation.NavigateTo("/addgame");
+    }
+
+    private void EditGame(int gameId)
+    {
+        Navigation.NavigateTo($"/editgame/{gameId}");
+    }
+
+    private async Task DeleteGame(int gameId)
+    {
+        // TODO: Add confirmation dialog
+        try
+        {
+            await GameService.DeleteAsync(gameId);
+            await LoadGames(); // Refresh the list
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting game: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Resets the game item to its original values if editing is canceled.
+    /// </summary>
+    /// <param name="game">The game item being edited.</param>
+    private void ResetItemToOriginalValues(object game)
+    {
+        ((Game)game).Name = gameBeforeEdit.Name;
+        ((Game)game).Owner = gameBeforeEdit.Owner;
+        //AddEditionEvent($"RowEditCancel event: Editing of Game {((Game)game).Name} canceled");
+    }
+
+    /// <summary>
+    /// Makes a backup of the game item before editing. 
+    /// </summary>
+    /// <param name="game">The game item being edited.</param>
+    private void BackupItem(object game)    
+    {
+        gameBeforeEdit = new()
+        {
+            Name = ((Game)game).Name,
+            Owner = ((Game)game).Owner
+        };
+        //AddEditionEvent($"RowEditPreview event: made a backup of Game {((Game)game).Name}");
+    }
+
+    /// <summary>
+    /// Filters the games based on the search string.
+    /// </summary>
+    private bool FilterFunction(Game game)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (game.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Saves the changes made to the game item.
+    /// </summary>
+    private async Task SaveGameChanges()
+    {
+        try
+        {
+            // TODO: Implement actual database save logic
+            // For now, simulate a save operation
+            await Task.Delay(100); // Simulate API call
+            
+            // Example: await GameService.UpdateAsync(editedGame);
+            
+            // Success - show green snackbar
+            Snackbar.Add("Game saved successfully!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            // Error - show red snackbar
+            Snackbar.Add($"Failed to save game: {ex.Message}", Severity.Error);
+            
+            // Log the error
+            Console.WriteLine($"Error saving game: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("console.error", $"Error saving game: {ex.Message}");
+        }
+    }
+}

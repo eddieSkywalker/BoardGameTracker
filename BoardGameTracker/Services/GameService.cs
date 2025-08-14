@@ -1,7 +1,8 @@
 using BoardGameTracker.Models;
+using BoardGameTracker.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace BoardGameTracker.Data
+namespace BoardGameTracker.Services
 {
     public class GameService : IGameService
     {

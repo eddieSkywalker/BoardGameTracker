@@ -352,4 +352,6 @@ MigrationBackup/
 appsettings.Development.json
 appsettings.Production.json
 appsettings.Staging.json
+appsettings.Test.json
 appsettings.Local.json
+appsettings.*.json
