@@ -1,0 +1,32 @@
+@* @inject IGameService GameService *@
+@using BoardGameTracker.Models
+@using BoardGameTracker.Services
+
+<MudDialog>
+    <TitleContent>
+        Title
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Model="model" Validated="OnValidated">
+            <MudTextField @bind-Value="model.Name" Label="Game Name" For="@(()=>model.Name)" Required="true" />
+            <MudTextField @bind-Value="model.Owner" Label="Owner" For="@(()=>model.Owner)" Required="true" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">OK</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance AddGameForm { get; set; }
+    private MudForm? _form;
+    private Game model = new();
+
+    [Parameter]
+    public string Title { get; set; } = "Title";
+    
+    private void Submit() => AddGameForm.Close(DialogResult.Ok(model));
+    private void Cancel() => AddGameForm.Cancel();
+}

@@ -3,6 +3,7 @@
 @inject IGameService GameService
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @using BoardGameTracker.Models
 @using BoardGameTracker.Services
 @using Microsoft.AspNetCore.Authorization
@@ -30,28 +31,37 @@
                     {
                         <div class="text-center">
                             <p>You don't have any games yet.</p>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateToAddGame">
-                                <MudIcon Icon="@Icons.Material.Filled.Add" /> Add Game
+                            <MudButton @onclick="OpenAddGameDialog" Variant="Variant.Filled" Color="Color.Primary">
+                                    <MudIcon Icon="@Icons.Material.Filled.Add" /> New Game
                             </MudButton>
                         </div>
                     }
                     else
                     {
                         // Games table
-                        <MudTable T="Game" Items="@games" Hover="true" CanCancelEdit="true" RowEditCancel="ResetItemToOriginalValues" HeaderClass="custom-header-style"
-                                  RowEditPreview="BackupItem" CommitEditTooltip="Save Changes" Filter="new Func<Game,bool>(FilterFunction)" 
-                                  OnCommitEditClick="@(() => SaveGameChanges())">
+                        <MudTable T="Game" Items="@games" Hover="true" CanCancelEdit="true" RowEditCancel="ResetItemToOriginalValues" 
+                                HeaderClass="custom-header-style" RowEditCommit="@((object editedRow) => UpdateGameRecords(editedRow))"
+                                RowEditPreview="BackupItem" CommitEditTooltip="Save Changes" Filter="new Func<Game,bool>(FilterFunction)">
                             <ToolBarContent>
                                 <MudTextField @bind-Value="searchString" Placeholder="Search games..." Adornment="Adornment.Start" 
                                               AdornmentIcon="@Icons.Material.Filled.Search" Class="mr-2" />
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateToAddGame">
-                                    <MudIcon Icon="@Icons.Material.Filled.Add" /> Add Game
+                                <MudButton @onclick="OpenAddGameDialog" Variant="Variant.Filled" Color="Color.Primary">
+                                    <MudIcon Icon="@Icons.Material.Filled.Add" /> New Game
                                 </MudButton>
                             </ToolBarContent>
                             <HeaderContent>
-                                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Game, object>(x=>x.Name)">Name</MudTableSortLabel></MudTh>
-                                <MudTh><MudTableSortLabel SortBy="new Func<Game, object>(x=>x.Owner)">Owner</MudTableSortLabel></MudTh>
-                                <MudTh><MudTableSortLabel SortBy="new Func<Game, object>(x=>x.CreatedDate)">CreatedDate</MudTableSortLabel></MudTh>
+                                <MudTh>
+                                    <MudTableSortLabel 
+                                        InitialDirection="SortDirection.Ascending" 
+                                        SortBy="new Func<Game, object>(x=>x.Name)">Name
+                                    </MudTableSortLabel>
+                                </MudTh>
+                                <MudTh>
+                                    <MudTableSortLabel SortBy="new Func<Game, object>(x=>x.Owner)">Owner</MudTableSortLabel>
+                                </MudTh>
+                                <MudTh>
+                                    <MudTableSortLabel SortBy="new Func<Game, object>(x=>x.CreatedDate)">CreatedDate</MudTableSortLabel>
+                                </MudTh>
                             </HeaderContent>
                             <RowTemplate>
                                 <MudTd>@context.Name</MudTd>
@@ -65,29 +75,6 @@
                                 </MudTd>
                             </RowEditingTemplate>
                         </MudTable>
-
-                        <br><br><br>
-                        <div class="row">
-                            @foreach (var game in games)
-                            {
-                                <div class="col-md-6 mb-3">
-                                    <div class="card">
-                                        <div class="card-body">
-                                            <h5 class="card-title">@game.Name</h5>
-                                            <p class="card-text">
-                                                <small class="text-muted">
-                                                    Owner: @game.Owner<br/>
-                                                    Added: @game.CreatedDate.ToString("MMM dd, yyyy")
-                                                </small>
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                        <div class="mt-3">
-                            <p class="text-muted">Total games: @games.Count()</p>
-                        </div>
                     }
                 </div>
             </div>
@@ -95,13 +82,18 @@
     </div>
 </div>
 
-@code 
-{
-    private List<Game>? games;
-    private bool isLoading = true;
+@code {
     private string currentUser = "Eddie"; // TODO: Replace with authenticated user
+
+    // Table related fields
+    private List<Game>? games;
     private Game? gameBeforeEdit;
     private string searchString = string.Empty;
+    private bool isLoading = true;
+    
+    // Dialog/Form related fields
+    private MudForm? _form;
+    private Game model = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -116,12 +108,13 @@
             
             // This goes to VS Code terminal
             Console.WriteLine($"Loading games for user: {currentUser}");
-            
             // This goes to browser F12 console
             await JSRuntime.InvokeVoidAsync("console.log", $"Loading games for user: {currentUser}");
             
-            games = (await GameService.GetByOwnerAsync(currentUser)).ToList();
-            
+            //games = (await GameService.GetByOwnerAsync(currentUser)).ToList();
+            games = (await GameService.GetAllAsync()).ToList();
+            //TODO - I switched from GetByOwner to GetAll and refresh did not fix this i had to rerun my project?
+
             // Browser console logging
             await JSRuntime.InvokeVoidAsync("console.log", $"Found {games.Count()} games");
         }
@@ -134,16 +127,6 @@
         {
             isLoading = false;
         }
-    }
-
-    private void NavigateToAddGame()
-    {
-        Navigation.NavigateTo("/addgame");
-    }
-
-    private void EditGame(int gameId)
-    {
-        Navigation.NavigateTo($"/editgame/{gameId}");
     }
 
     private async Task DeleteGame(int gameId)
@@ -200,18 +183,18 @@
     /// <summary>
     /// Saves the changes made to the game item.
     /// </summary>
-    private async Task SaveGameChanges()
+    private async Task UpdateGameRecords(object editedRow)
     {
         try
         {
-            // TODO: Implement actual database save logic
-            // For now, simulate a save operation
-            await Task.Delay(100); // Simulate API call
+            Game editedGame = (Game)editedRow;
+            await GameService.UpdateAsync(editedGame);
+            await LoadGames(); 
             
-            // Example: await GameService.UpdateAsync(editedGame);
-            
-            // Success - show green snackbar
-            Snackbar.Add("Game saved successfully!", Severity.Success);
+            // Show a success message
+            Snackbar.Add($"Game '{editedGame.Name}' updated successfully!", Severity.Success);
+            Console.WriteLine($"Game updated successfully via dialog {editedGame}");
+            await JSRuntime.InvokeVoidAsync("console.log", editedGame);
         }
         catch (Exception ex)
         {
@@ -221,6 +204,39 @@
             // Log the error
             Console.WriteLine($"Error saving game: {ex.Message}");
             await JSRuntime.InvokeVoidAsync("console.error", $"Error saving game: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Opens a form-containing dialog to request new game details before adding it to the users library.
+    /// </summary>
+    private async Task OpenAddGameDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var parameters = new DialogParameters
+        {
+            { "Title", "Add Your Game" }
+        };
+        var dialog = await DialogService.ShowAsync<AddGameDialog>("", parameters, options);
+        var result = await dialog.Result;
+
+        // Grab new game data and save it.
+        if (!result.Canceled && result.Data is Game newGame)
+        {
+            try
+            {
+                await GameService.AddAsync(newGame);
+                await LoadGames(); 
+
+                Snackbar.Add($"Game '{newGame.Name}' added successfully!", Severity.Success);
+                Console.WriteLine($"Game added successfully via dialog {newGame}");
+                await JSRuntime.InvokeVoidAsync("console.log", newGame);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error saving new game: {ex.Message}");
+                Snackbar.Add("Failed to save game. Please try again.", Severity.Error);
+            }
         }
     }
 }
